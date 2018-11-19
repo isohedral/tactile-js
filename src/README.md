@@ -5,5 +5,5 @@ files found here, in the order
 * `tiling_data.inc`
 * `tactile.inc`
 
-The file tiling_data.inc is generated automatically by a separate
+The file `tiling_data.inc` is generated automatically by a separate
 program (not included here).  This directory can safely be ignored by just about everyone—the main file to use is in the `lib/` folder.
