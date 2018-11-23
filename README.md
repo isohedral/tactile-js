@@ -52,6 +52,8 @@ Setting the parameters causes a lot of internal data to be recomputed (efficient
 
 As discussed above, a prototile's outline can be thought of as a sequence of tiling edges running between consecutive tiling vertices. Of course, in order to tile the plane, some of those edges must be transformed copies of others, so that a tile can interlock with its neighbours.  In most tiling types, then, there are fewer distinct _edge shapes_ than there are edges, sometimes as few as a single path repeated all the way around the tile. Furthermore, some edge shapes can have internal symmetries forced upon it by the tiling: 
 
+<p align="center"><img src="images/jusi.png" height=100/></p>
+
  * Some edges must look the same after a 180° rotation, like a letter S.  We call these **S** edges.
  * Some edges must look the same after reflecting across their length, like a letter U.  We call these **U** edges.
  * Some edges must look the same after both rotation _and_ reflection. Only a straight line has this property, so we call these **I** edges.
@@ -83,6 +85,8 @@ for( let i of a_tiling.shape() ) {
 }
 ```
 
+<p align="center"><img src="images/shape.png" height=250/></p>
+
 Occasionally, it's annoying to have to worry about the **U** or **S** symmetries of edges yourself.  Tactile offers an alternative way to describe the tile's outline that includes extra steps that account for these symmetries.  In this case, the transformation matrices build in scaling operations that map a path from (0,0) to (1,0) to, say, each half of an **S** edge separately.  The correct approach here is to iterate over a tile's `parts()` rather than its `shape()`:
 
 ```C++
@@ -107,7 +111,7 @@ for( let i of a_tiling.parts() ) {
 
 When drawing a prototile's outline using `parts()`, a **U** edge's midpoint might lie anywhere on the perpendicular bisector of the line joining two tiling vertices. For that reason, you are permitted to make an exception and have the underlying canonical path end at (1,_y_) for any _y_ value.
 
-Note that there's nothing in the description above that knows how paths are represented. That's a deliberate design decision that keeps the library lightweight and adaptable to different sorts of curves.  It's up to you to maintain a set of canonical edge shapes that you can transform and string together to get the final tile outline. The demo programs offer examples of doing this for polygonal paths and cubic Béziers.
+Note that there's nothing in the description above that knows how paths are represented. That's a deliberate design decision that keeps the library lightweight and adaptable to different sorts of curves.  It's up to you to maintain a set of canonical edge shapes that you can transform and string together to get the final tile outline. 
 
 ## Laying out tiles
 
