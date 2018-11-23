@@ -9,9 +9,15 @@ The rest of the documentation below is a translation into Javascript of the corr
 
 In order to understand how to use Tactile, it might first be helpful to become acquainted with the Isohedral tilings.  The ultimate reference on the subject is the book _Tilings and Patterns_ by Grünbaum and Shephard.  You could also have a look at my book, [_Introductory Tiling Theory for Computer Graphics_][mybook], which is much slimmer and written more from a computer science perspective.  If you want a quick and free introduction, you could look through Chapters 2 and 4 of [my PhD thesis][phd].
 
-Every isohedral tiling is made from repeated copies of a single shape called the _prototile_, which repeats in a very orderly way to fill the plane. We can describe the prototile's shape by breaking it into _tiling edges_, the shared boundaries between adjacent tiles, which connect at _tiling vertices_, the points where three or more tiles meet.  There are 93 "tiling types", different ways that tiles can relate to each other. Of these, 12 are boring for reasons I won't talk about here; this library lets you manipulate the other 81 types.
+Every isohedral tiling is made from repeated copies of a single shape called the _prototile_, which repeats in a very orderly way to fill the plane. We can describe the prototile's shape by breaking it into _tiling edges_, the shared boundaries between adjacent tiles, which connect at _tiling vertices_, the points where three or more tiles meet.
+
+<p align="center"><img src="images/topo.png" height=250/></p>
+
+There are 93 "tiling types", different ways that tiles can relate to each other. Of these, 12 are boring for reasons I won't talk about here; this library lets you manipulate the other 81 types.
 
 For each isohedral tiling type, there are constraints on the legal relationships between the tiling vertices.  Those constraints can be encoded in a set of _parameters_, which are just real numbers.  Some tiling types have zero parameters (their tiling vertices must form a fixed shape, like a square or a hexagon); others have as many as six free parameters.
+
+<p align="center"><img src="images/params.png" height=150/></p>
 
 ## Constructing a tiling
 
