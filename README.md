@@ -87,6 +87,8 @@ for( let i of a_tiling.shape() ) {
 
 <p align="center"><img src="images/shape.png" height=250/></p>
 
+Javascript doesn't include functions for linear algebra. For what it's worth, TactileJS includes a function `Tactile.mul` which understands how to multiply 2D transformation matrices together (as might be offered to you in a shape iterator's `T` field above), and how to transform a point (represented as a Javascript object with fields `x` and `y`) using a transformation matrix.
+
 Occasionally, it's annoying to have to worry about the **U** or **S** symmetries of edges yourself.  Tactile offers an alternative way to describe the tile's outline that includes extra steps that account for these symmetries.  In this case, the transformation matrices build in scaling operations that map a path from (0,0) to (1,0) to, say, each half of an **S** edge separately.  The correct approach here is to iterate over a tile's `parts()` rather than its `shape()`:
 
 ```C++
