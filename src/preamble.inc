@@ -1,3 +1,11 @@
+/*
+ * Tactile-JS
+ * Copyright 2018 Craig S. Kaplan, csk@uwaterloo.ca
+ *
+ * Distributed under the terms of the 3-clause BSD license.  See the
+ * file "LICENSE" for more information.
+ */
+
 'use strict'
 
 const Tactile = (function(window)
@@ -32,9 +40,10 @@ function buildLibrary()
 				A[3]*B[2] + A[4]*B[5] + A[5]];
 		}
 	};
-	
+
 	tactile_lib.matchSeg = function( p, q )
 	{
 		return [q.x-p.x, p.y-q.y, p.x,  q.y-p.y, q.x-p.x, p.y];
 	};
+
 
