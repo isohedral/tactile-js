@@ -32,4 +32,9 @@ function buildLibrary()
 				A[3]*B[2] + A[4]*B[5] + A[5]];
 		}
 	};
+	
+	tactile_lib.matchSeg = function( p, q )
+        {
+            return [q.x-p.x, p.y-q.y, p.x,  q.y-p.y, q.x-p.x, p.y];
+        }
 
