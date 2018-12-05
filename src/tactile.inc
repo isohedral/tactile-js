@@ -31,11 +31,6 @@ function makeMatrix( coeffs, offs, params )
 	return ret;
 }
 
-function matchSeg( p, q )
-{
-	return [q.x-p.x, p.y-q.y, p.x,  q.y-p.y, q.x-p.x, p.y];
-}
-
 const M_orients = [
 	[1.0, 0.0, 0.0,    0.0, 1.0, 0.0],   // IDENTITY
 	[-1.0, 0.0, 1.0,   0.0, -1.0, 0.0],  // ROT
@@ -85,7 +80,8 @@ tactile_lib.IsohedralTiling = function( tp )
 			const ro = this.ttd.edge_orientations[2*idx+1];
 			this.reversals.push( fl != ro );
 			this.edges.push( tactile_lib.mul( 
-					matchSeg( this.verts[idx], this.verts[(idx+1)%ntv] ),
+					tactile_lib.matchSeg( 
+					    this.verts[idx], this.verts[(idx+1)%ntv] ),
 				M_orients[2*fl+ro] ) );
 		}
 
