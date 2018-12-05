@@ -36,5 +36,5 @@ function buildLibrary()
 	tactile_lib.matchSeg = function( p, q )
 	{
 		return [q.x-p.x, p.y-q.y, p.x,  q.y-p.y, q.x-p.x, p.y];
-	}
+	};
 
