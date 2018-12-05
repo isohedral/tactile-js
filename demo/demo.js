@@ -1,3 +1,11 @@
+/*
+ * Tactile-JS
+ * Copyright 2018 Craig S. Kaplan, csk@uwaterloo.ca
+ *
+ * Distributed under the terms of the 3-clause BSD license.  See the
+ * file "LICENSE" for more information.
+ */
+
 // A port of the Tactile C++ demo program to P5.js.
 
 let QS = null;
@@ -281,6 +289,8 @@ function mouseDragged()
 		edges[drag_edge_shape][drag_vertex] = npt;
 		cacheTileShape();
 		loop();
+
+		return false;
 	}
 }
 
