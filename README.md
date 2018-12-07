@@ -146,4 +146,4 @@ I hope you find this library to be useful.  If you are using Tactile for researc
 [quickset]: https://github.com/bit101/quicksettings
 [tactile]: https://github.com/isohedral/tactile
 [demo]: http://isohedral.ca/software/tactile/
-[mybook]: https://www.morganclaypool.com/doi/abs/10.2200/S00207ED1V01Y200907CGR011]
+[mybook]: https://www.amazon.com/Introductory-Computer-Graphics-Synthesis-Animation/dp/1608450171
