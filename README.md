@@ -121,7 +121,7 @@ The core operation of tiling is to fill a region of the plane with copies of the
 
 ```Javascript
 // Fill a rectangle given its bounds (xmin, ymin, xmax, ymax)
-for( let i of a_tiling.fillRegionBounds( 0.0, 0.0, 8.0, 5.0 ) {
+for( let i of a_tiling.fillRegionBounds( 0.0, 0.0, 8.0, 5.0 ) ) {
     // Get the 3x3 matrix corresponding to one of the transformed
     // tiles in the filled region.
     const T = i.T;
