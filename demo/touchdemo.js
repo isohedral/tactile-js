@@ -186,6 +186,8 @@ function touchEnded()
 		}
 	}
 
+	u_constrain = false;
+
 	return false;
 }
 
@@ -508,7 +510,7 @@ function doTouchStarted( id )
 
 			for( let idx = 1; idx < ej.length; ++idx ) {
 				let Q = Tactile.mul( T, ej[idx] );
-				if( ptdist( Q, pt ) < 20 ) {
+				if( ptdist( Q, pt ) < 0.5 * phys_unit ) {
 					u_constrain = false;
 					if( idx == (ej.length-1) ) {
 						if( shp == Tactile.U && !i.second ) {
