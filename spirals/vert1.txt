@@ -1,0 +1,19 @@
+precision highp float;
+
+attribute vec3 aPosition;
+
+uniform bool fullscreen;
+
+varying vec2 uv;
+
+void main() {
+	uv = aPosition.xy;
+
+	vec4 pos = vec4(aPosition, 1.0);
+	if( fullscreen ) {
+		pos = vec4( 2.0*pos.x-1.0, 2.0*pos.y-1.0, pos.z, 1.0 );
+	}
+	pos.y = -pos.y;
+
+	gl_Position = pos;
+}
