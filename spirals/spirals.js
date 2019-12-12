@@ -92,6 +92,9 @@ const COLS = [
 	[ 252, 255, 245 ],
 	[ 219, 188, 209 ] ];
 
+const XMLNS = "http://www.w3.org/2000/svg";
+const XLINK = "http://www.w3.org/1999/xlink";
+
 let shad1;
 
 class Permutation {
@@ -172,8 +175,8 @@ class MinColouring extends Colouring {
 	}
 }
 
-function sub( V, W ) { return { x: V.x-W.x, y: V.y-W.y }; };
-function dot( V, W ) { return V.x*W.x + V.y*W.y; };
+function sub( V, W ) { return { x: V.x-W.x, y: V.y-W.y }; }
+function dot( V, W ) { return V.x*W.x + V.y*W.y; }
 function len( V ) { return sqrt( dot( V, V ) ); }
 function ptdist( V, W ) { return len( sub( V, W ) ); }
 function inv( T ) {
@@ -930,7 +933,138 @@ function setupInterface()
 
 function doSave()
 {
-	save( get( WIDTH/2, HEIGHT/2, WIDTH/2, HEIGHT/2 ), "spiral.png" );
+	const getSvgFile = ( s, svg ) =>
+		s.serializeToString( svg ).split( '\n' );
+
+	const svg = getSpiralTilingSVG();
+	const svgFile = getSvgFile( new XMLSerializer(), svg );
+	save( svgFile, "spiral", "svg" );
+}
+
+function getSpiralTilingSVG()
+{
+	const t1 = tiling.getT1();
+	const t2 = tiling.getT2();
+
+	let svgElement = document.createElementNS( XMLNS, 'svg' );
+	let g = document.createElementNS( XMLNS, 'g' );
+
+	svgElement.setAttribute( 'xmlns:xlink', XLINK );
+	svgElement.setAttribute( 'height', HEIGHT );
+	svgElement.setAttribute( 'width', WIDTH );
+
+	svgElement.appendChild( getSpiralUnitSVG() );
+
+	// TODO(nikihasrati): Fix small tilings in centre.
+
+	let i_i = spiral_A === 0 ? -spiral_B : -4 * spiral_A;
+	let i_f = spiral_A === 0 ? spiral_B : 5 * spiral_A;
+	let j_i = spiral_B === 0 ? -spiral_A : 1;
+	let j_f = spiral_B === 0 ? spiral_A : spiral_B;
+
+	for ( let i = i_i; i <= i_f; i++ ) {
+		for ( let j = j_i; j <= j_f; j++ ) {
+			let unit = document.createElementNS( XMLNS, 'use' );
+			unit.setAttribute( 'xlink:href', '#spiral-unit' );
+
+			let v = { x: i*t1.x + j*t2.x, y: i*t1.y + j*t2.y };
+			let vp = Tactile.mul( tiling_T, v );
+			let s = Math.exp( vp.x );
+			let r = degrees( vp.y );
+
+			unit.setAttribute( 'transform', `scale(${s} ${s}) rotate(${r})` );
+			g.appendChild( unit );
+		}
+	}
+
+	const s = HEIGHT / TWO_PI;
+	const tx = WIDTH / 2;
+	const ty = HEIGHT / 2;
+	g.setAttribute( 'transform', `translate(${tx}, ${ty}) scale(${s}, ${s})` );
+	svgElement.appendChild( g );
+
+	return svgElement;
+}
+
+// Return an SVG definition of a spiral translation unit.
+function getSpiralUnitSVG()
+{
+	let defs = document.createElementNS( XMLNS, 'defs' );
+	let symbol = document.createElementNS( XMLNS, 'symbol' );
+	let g = document.createElementNS( XMLNS, 'g' );
+
+	symbol.setAttribute('id', 'spiral-unit');
+	symbol.setAttribute('overflow', 'visible');
+
+	for ( let i = 0; i < tiling.numAspects(); i++ ) {
+		let T = tiling.getAspectTransform( i );
+		let tile = getSpiralSVG( T );
+		// TODO(nikihasrati): Add colouring when colour is toggled on.
+		tile.setAttribute( 'fill', 'none' );
+		g.appendChild( tile );
+	}
+
+	symbol.appendChild( g );
+	defs.appendChild( symbol );
+
+	return defs;
+}
+
+// Return an SVG path representing the spiral tiling aspect with transformation T.
+function getSpiralSVG( T )
+{
+	// Return the spiral coordinates of point v.
+	function spiral( v ) {
+		return {
+			x: +( Math.exp(v.x) * Math.cos(v.y) ),
+			y: +( Math.exp(v.x) * Math.sin(v.y) )}
+	}
+
+	// Return the point that divides the line segment from v1 to v2 into ratio m:n.
+	function section( v1, v2, m, n ) {
+		return {
+			x: ( m*v1.x + n*v2.x ) / ( m + n ),
+			y: ( m*v1.y + n*v2.y ) / ( m + n )
+		}
+	}
+
+	// Return sample points from tiling edge.
+	function sample_edge( v1, v2, n ) {
+		let pts = [];
+		for ( let i = 0; i <= n; i++ ) {
+			let p = spiral( section( v1, v2, n - i, i ) );
+			pts.push( [ p.x, p.y ] );
+		}
+		return pts;
+	}
+
+	// Apply the aspect transformation to the prototile.
+	let vs = [ ...tile_shape, tile_shape[0] ];
+	vs = vs.map( v => Tactile.mul( T, v ) );
+
+	// Make bezier curves to represent each edge of the spiral tile.
+	let curves = [];
+	for (let i = 0; i < vs.length - 1; i++ ) {
+		let v1 = Tactile.mul( tiling_T, vs[ i ] );
+		let v2 = Tactile.mul( tiling_T, vs[ i+1 ] );
+		let edge_curves = sample_edge( v1, v2, 32 );
+		let bezierCurves = fitCurve( edge_curves, 50 );
+		curves.push(...bezierCurves);
+	}
+
+	// Create SVG string representation of bezier curves.
+	let d = [`M ${curves[0][0][0]} ${curves[0][0][1]}`];
+	for ( c of curves ) {
+		d.push(`C ${c[1][0]} ${c[1][1]}, ${c[2][0]} ${c[2][1]}, ${c[3][0]} ${c[3][1]}`)
+	}
+
+	let path = document.createElementNS( XMLNS, 'path' );
+	path.setAttribute('d', d.join(' '));
+	path.setAttribute('stroke', 'black');
+	path.setAttribute('fill', 'none');
+	path.setAttribute('vector-effect', 'non-scaling-stroke');
+
+	return path;
 }
 
 function doHelp()
