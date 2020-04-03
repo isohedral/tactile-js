@@ -18,6 +18,7 @@ let tile_shape = null;
 
 let phys_unit; // Ideally, about a centimeter
 let edit_button_box = null;
+let save_button_box = null;
 let prev_box = null;
 let next_box = null;
 let navigator_box = null;
@@ -70,19 +71,19 @@ const COLS = [
 	[ 252, 255, 245 ],
 	[ 219, 188, 209 ] ];
 
-function sub( V, W ) { return { x: V.x-W.x, y: V.y-W.y }; };
-function dot( V, W ) { return V.x*W.x + V.y*W.y; };
+function sub( V, W ) { return { x: V.x-W.x, y: V.y-W.y }; }
+function dot( V, W ) { return V.x*W.x + V.y*W.y; }
 function len( V ) { return sqrt( dot( V, V ) ); }
 function ptdist( V, W ) { return len( sub( V, W ) ); }
 function inv( T ) {
 	const det = T[0]*T[4] - T[1]*T[3];
 	return [T[4]/det, -T[1]/det, (T[1]*T[5]-T[2]*T[4])/det,
 		-T[3]/det, T[0]/det, (T[2]*T[3]-T[0]*T[5])/det];
-};
+}
 function normalize( V ) {
 	const l = len( V );
 	return { x: V.x / l, y: V.y / l };
-};
+}
 
 function makeBox( x, y, w, h )
 {
@@ -301,7 +302,7 @@ function calcEditorTransform()
 		ymax = Math.max( ymax, v.y );
 	}
 
-	const ww = edit_box.w - 5 * phys_unit
+	const ww = edit_box.w - 5 * phys_unit;
 
 	const sc = Math.min( (ww-50) / (xmax-xmin), (edit_box.h-50) / (ymax-ymin) );
 
@@ -437,6 +438,62 @@ function deleteVertex()
 	loop();
 }
 
+function saveSVG() 
+{
+	const xmlns = "http://www.w3.org/2000/svg";
+	const svgElement = getTilingSVG( xmlns );
+	const s = new XMLSerializer();
+	const svgFile = s.serializeToString( svgElement ).split( '\n' );
+	save( svgFile, "tiling", "svg" );
+}
+
+function getTilingSVG( namespace )
+{
+	let svgElement = document.createElementNS( namespace,'svg' );
+	svgElement.setAttribute( 'xmlns:xlink','http://www.w3.org/1999/xlink' );
+	svgElement.setAttribute( 'height', window.innerHeight );
+	svgElement.setAttribute( 'width', window.innerWidth );
+
+	let tileSVG = getTileShapeSVG( namespace );
+	svgElement.appendChild( tileSVG );
+    
+	const bx = getTilingRect();
+	for ( let i of tiling.fillRegionQuad( bx[0], bx[1], bx[2], bx[3] ) ) {
+		const T = Tactile.mul( tiling_T, i.T );
+		const svg_T = [ T[0], T[3], T[1], T[4], T[2], T[5] ].map( t => +t.toFixed(3) );
+
+		const col = COLS[ tiling.getColour( i.t1, i.t2, i.aspect ) + 1 ];
+        
+		let tile = document.createElementNS( namespace, 'use' );
+		tile.setAttribute( 'xlink:href', '#tile-shape' );
+		tile.setAttribute( 'fill', `rgb(${col[0]},${col[1]},${col[2]})` );
+		tile.setAttribute( 'transform', `matrix(${svg_T})` );
+		svgElement.appendChild( tile );
+	}
+
+	return svgElement;
+}
+
+function getTileShapeSVG( namespace )
+{
+	let defs = document.createElementNS( namespace, 'defs' );
+	let symbol = document.createElementNS( namespace, 'symbol' );
+	let polygon = document.createElementNS( namespace, 'polygon' );
+
+	let points = tile_shape.map( v => `${+v.x.toFixed(3)},${+v.y.toFixed(3)}` );
+
+	polygon.setAttribute( 'points', points.join(' ') );
+	polygon.setAttribute( 'stroke', 'black' );
+	polygon.setAttribute( 'vector-effect', 'non-scaling-stroke' );
+
+	symbol.setAttribute( 'id', 'tile-shape' );
+	symbol.setAttribute( 'overflow', 'visible' );
+	symbol.appendChild( polygon );
+	defs.appendChild( symbol );
+
+	return defs;
+}
+
 function doTouchStarted( id )
 {
 	// First, check if this touch is intended to initiate an
@@ -445,6 +502,12 @@ function doTouchStarted( id )
 	if( mode == MODE_NONE ) {
 		if( hitBox( mouseX, mouseY, edit_button_box ) ) {
 			show_controls = !show_controls;
+			loop();
+			return false;
+		}
+
+		if( hitBox( mouseX, mouseY, save_button_box ) ) {
+			saveSVG();
 			loop();
 			return false;
 		}
@@ -667,6 +730,8 @@ function setupInterface()
 
 	edit_button_box = makeBox(
 		0.25 * phys_unit, 0.25 * phys_unit, phys_unit, phys_unit );
+	save_button_box = makeBox(
+		1.5 * phys_unit, 0.25 * phys_unit, phys_unit, phys_unit );
 	navigator_box = makeBox(
 		w - 5.25 * phys_unit, 0.25 * phys_unit, 5 * phys_unit, phys_unit );
 	prev_box = makeBox(
@@ -737,6 +802,7 @@ function draw()
 	drawTiling();
 
 	drawIcon( drawEditIcon, edit_button_box );
+	drawIcon( drawSaveIcon, save_button_box );
 
 	fill( 252, 255, 254, 220 );
 	stroke( 0 );
@@ -776,97 +842,141 @@ function draw()
 	noLoop();
 }
 
+function drawSaveIcon()
+{
+	drawIconBackground();
+
+	fill( 0, 0, 0 );
+	beginShape();
+	vertex( 133.75, 161.5 );
+	vertex( 51.25, 161.5 );
+	bezierVertex( 43.6172, 161.5, 37.5, 155.313, 37.5, 147.75 );
+	vertex( 37.5, 51.5 );
+	bezierVertex( 37.5, 43.9375, 43.6172, 37.75, 51.25, 37.75 );
+	vertex( 147.5, 37.75 );
+	bezierVertex( 155.063, 37.75, 161.25, 43.9375, 161.25, 51.5 );
+	vertex( 161.25, 134.0 );
+	beginContour();
+	vertex( 99.375, 51.5 );
+	bezierVertex( 87.9609, 51.5, 78.75, 60.7109, 78.75, 72.125 );
+	bezierVertex( 78.75, 83.5391, 87.9609, 92.75, 99.375, 92.75 );
+	bezierVertex( 110.789, 92.75, 120.0, 83.5391, 120.0, 72.125 );
+	bezierVertex( 120.0, 60.7109, 110.789, 51.5, 99.375, 51.5 );
+	endContour();
+	beginContour();
+	vertex( 120.0, 120.25 );
+	vertex( 51.25, 120.25 );
+	vertex( 51.25, 147.75 );
+	vertex( 120.0, 147.75 );
+	endContour();
+	endShape( CLOSE );
+
+	drawIconOutline();
+}
+
 function drawEditIcon() 
 {
+	drawIconBackground();
+
+	fill( 0, 0, 0 );
+	beginShape();
+	vertex( 119.539, 148.27 );
+	vertex( 82.0313, 109.57 );
+	bezierVertex( 87.8008, 103.59, 93.8594, 97.9297, 99.0508, 91.5508 );
+	vertex( 132.051, 125.602 );
+	bezierVertex( 132.93, 126.512, 134.648, 126.281, 135.898, 125.09 );
+	vertex( 136.301, 124.711 );
+	bezierVertex( 137.551, 123.52, 137.852, 121.82, 136.969, 120.91 );
+	vertex( 103.16, 86.0313 );
+	bezierVertex( 104.309, 84.3086, 105.391, 82.5195, 106.371, 80.6484 );
+	vertex( 146.738, 122.301 );
+	vertex( 119.539, 148.27 );
+	endShape( CLOSE );
+	fill( 0, 0, 0 );
+	beginShape();
+	vertex( 79.6211, 61.7383 );
+	bezierVertex( 78.7383, 60.8281, 77.0117, 61.0586, 75.7695, 62.25 );
+	vertex( 75.3711, 62.6289 );
+	bezierVertex( 74.1211, 63.8203, 73.8203, 65.5195, 74.6992, 66.4297 );
+	vertex( 112.578, 105.512 );
+	bezierVertex( 107.738, 112.25, 102.48, 118.711, 95.75, 123.73 );
+	vertex( 51.0586, 77.6289 );
+	vertex( 78.2617, 51.6484 );
+	vertex( 120.059, 94.7813 );
+	bezierVertex( 118.891, 96.4609, 117.719, 98.1484, 116.539, 99.8516 );
+	vertex( 79.6211, 61.7383 );
+	endShape( CLOSE );
+	fill( 0, 0, 0 );
+	beginShape();
+	vertex( 151.391, 127.102 );
+	vertex( 124.191, 153.078 );
+	vertex( 131.961, 161.102 );
+	bezierVertex( 136.391, 165.672, 145.07, 164.512, 151.359, 158.512 );
+	vertex( 155.801, 154.27 );
+	bezierVertex( 162.078, 148.27, 163.59, 139.699, 159.16, 135.129 );
+	vertex( 151.391, 127.102 );
+	endShape( CLOSE );
+	fill( 0, 0, 0 );
+	beginShape();
+	vertex( 37.6016, 41.3789 );
+	vertex( 46.4102, 72.8203 );
+	vertex( 60.0117, 59.8281 );
+	vertex( 73.6094, 46.8398 );
+	vertex( 42.3008, 36.8906 );
+	bezierVertex( 39.9609, 36.1484, 36.9414, 39.0313, 37.6016, 41.3789 );
+	endShape( CLOSE );
+
+	drawIconOutline();
+}
+
+function drawIconBackground()
+{
 	fill( 252, 255, 254, 220 );
-    beginShape();
-    vertex( 180.0, 7.94141 );
-    vertex( 19.2188, 7.94141 );
-    bezierVertex( 12.6211, 7.94141, 7.21875, 13.3398, 7.21875, 19.9414 );
-    vertex( 7.21875, 180.73 );
-    bezierVertex( 7.21875, 187.328, 12.6211, 192.73, 19.2188, 192.73 );
-    vertex( 180.0, 192.73 );
-    bezierVertex( 186.602, 192.73, 192.0, 187.328, 192.0, 180.73 );
-    vertex( 192.0, 19.9414 );
-    bezierVertex( 192.0, 13.3398, 186.602, 7.94141, 180.0, 7.94141 );
-    endShape( CLOSE );
-    fill( 0, 0, 0 );
-    beginShape();
-    vertex( 119.539, 148.27 );
-    vertex( 82.0313, 109.57 );
-    bezierVertex( 87.8008, 103.59, 93.8594, 97.9297, 99.0508, 91.5508 );
-    vertex( 132.051, 125.602 );
-    bezierVertex( 132.93, 126.512, 134.648, 126.281, 135.898, 125.09 );
-    vertex( 136.301, 124.711 );
-    bezierVertex( 137.551, 123.52, 137.852, 121.82, 136.969, 120.91 );
-    vertex( 103.16, 86.0313 );
-    bezierVertex( 104.309, 84.3086, 105.391, 82.5195, 106.371, 80.6484 );
-    vertex( 146.738, 122.301 );
-    vertex( 119.539, 148.27 );
-    endShape( CLOSE );
-    fill( 0, 0, 0 );
-    beginShape();
-    vertex( 79.6211, 61.7383 );
-    bezierVertex( 78.7383, 60.8281, 77.0117, 61.0586, 75.7695, 62.25 );
-    vertex( 75.3711, 62.6289 );
-    bezierVertex( 74.1211, 63.8203, 73.8203, 65.5195, 74.6992, 66.4297 );
-    vertex( 112.578, 105.512 );
-    bezierVertex( 107.738, 112.25, 102.48, 118.711, 95.75, 123.73 );
-    vertex( 51.0586, 77.6289 );
-    vertex( 78.2617, 51.6484 );
-    vertex( 120.059, 94.7813 );
-    bezierVertex( 118.891, 96.4609, 117.719, 98.1484, 116.539, 99.8516 );
-    vertex( 79.6211, 61.7383 );
-    endShape( CLOSE );
-    fill( 0, 0, 0 );
-    beginShape();
-    vertex( 151.391, 127.102 );
-    vertex( 124.191, 153.078 );
-    vertex( 131.961, 161.102 );
-    bezierVertex( 136.391, 165.672, 145.07, 164.512, 151.359, 158.512 );
-    vertex( 155.801, 154.27 );
-    bezierVertex( 162.078, 148.27, 163.59, 139.699, 159.16, 135.129 );
-    vertex( 151.391, 127.102 );
-    endShape( CLOSE );
-    fill( 0, 0, 0 );
-    beginShape();
-    vertex( 37.6016, 41.3789 );
-    vertex( 46.4102, 72.8203 );
-    vertex( 60.0117, 59.8281 );
-    vertex( 73.6094, 46.8398 );
-    vertex( 42.3008, 36.8906 );
-    bezierVertex( 39.9609, 36.1484, 36.9414, 39.0313, 37.6016, 41.3789 );
-    endShape( CLOSE );
-    fill( 0, 0, 0 );
-    beginShape();
-    vertex( 85.75, 15.2109 );
-    vertex( 177.18, 15.2109 );
-    bezierVertex( 181.371, 15.2109, 184.789, 18.6211, 184.789, 22.8203 );
-    vertex( 184.789, 177.18 );
-    bezierVertex( 184.789, 181.371, 181.379, 184.789, 177.18, 184.789 );
-    vertex( 84.4453, 184.789 );
-    vertex( 84.4453, 200.0 );
-    vertex( 177.18, 200.0 );
-    bezierVertex( 189.762, 200.0, 200.0, 189.762, 200.0, 177.18 );
-    vertex( 200.0, 22.8203 );
-    bezierVertex( 200.0, 10.2383, 189.762, 0.0, 177.18, 0.0 );
-    vertex( 84.0117, 0.0 );
-    vertex( 85.75, 15.2109 );
-    endShape( CLOSE );
-    fill( 0, 0, 0 );
-    beginShape();
-    vertex( 114.25, 184.789 );
-    vertex( 22.8203, 184.789 );
-    bezierVertex( 18.6289, 184.789, 15.2109, 181.379, 15.2109, 177.18 );
-    vertex( 15.2109, 22.8203 );
-    bezierVertex( 15.2109, 18.6289, 18.6211, 15.2109, 22.8203, 15.2109 );
-    vertex( 115.555, 15.2109 );
-    vertex( 115.555, 0.0 );
-    vertex( 22.8203, 0.0 );
-    bezierVertex( 10.2383, 0.0, 0.0, 10.2383, 0.0, 22.8203 );
-    vertex( 0.0, 177.18 );
-    bezierVertex( 0.0, 189.762, 10.2383, 200.0, 22.8203, 200.0 );
-    vertex( 115.988, 200.0 );
-    vertex( 114.25, 184.789 );
-    endShape( CLOSE );
+	beginShape();
+	vertex( 180.0, 7.94141 );
+	vertex( 19.2188, 7.94141 );
+	bezierVertex( 12.6211, 7.94141, 7.21875, 13.3398, 7.21875, 19.9414 );
+	vertex( 7.21875, 180.73 );
+	bezierVertex( 7.21875, 187.328, 12.6211, 192.73, 19.2188, 192.73 );
+	vertex( 180.0, 192.73 );
+	bezierVertex( 186.602, 192.73, 192.0, 187.328, 192.0, 180.73 );
+	vertex( 192.0, 19.9414 );
+	bezierVertex( 192.0, 13.3398, 186.602, 7.94141, 180.0, 7.94141 );
+	endShape( CLOSE );
+}
+
+function drawIconOutline()
+{
+	fill( 0, 0, 0 );
+	beginShape();
+	vertex( 85.75, 15.2109 );
+	vertex( 177.18, 15.2109 );
+	bezierVertex( 181.371, 15.2109, 184.789, 18.6211, 184.789, 22.8203 );
+	vertex( 184.789, 177.18 );
+	bezierVertex( 184.789, 181.371, 181.379, 184.789, 177.18, 184.789 );
+	vertex( 84.4453, 184.789 );
+	vertex( 84.4453, 200.0 );
+	vertex( 177.18, 200.0 );
+	bezierVertex( 189.762, 200.0, 200.0, 189.762, 200.0, 177.18 );
+	vertex( 200.0, 22.8203 );
+	bezierVertex( 200.0, 10.2383, 189.762, 0.0, 177.18, 0.0 );
+	vertex( 84.0117, 0.0 );
+	vertex( 85.75, 15.2109 );
+	endShape( CLOSE );
+	fill( 0, 0, 0 );
+	beginShape();
+	vertex( 114.25, 184.789 );
+	vertex( 22.8203, 184.789 );
+	bezierVertex( 18.6289, 184.789, 15.2109, 181.379, 15.2109, 177.18 );
+	vertex( 15.2109, 22.8203 );
+	bezierVertex( 15.2109, 18.6289, 18.6211, 15.2109, 22.8203, 15.2109 );
+	vertex( 115.555, 15.2109 );
+	vertex( 115.555, 0.0 );
+	vertex( 22.8203, 0.0 );
+	bezierVertex( 10.2383, 0.0, 0.0, 10.2383, 0.0, 22.8203 );
+	vertex( 0.0, 177.18 );
+	bezierVertex( 0.0, 189.762, 10.2383, 200.0, 22.8203, 200.0 );
+	vertex( 115.988, 200.0 );
+	vertex( 114.25, 184.789 );
+	endShape( CLOSE );
 }

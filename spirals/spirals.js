@@ -12,6 +12,10 @@ let tiling = null;
 let edges = null;
 let tile_shape = null;
 
+let colouring = null;
+let uniform_colouring = null;
+let min_colouring = null;
+
 let phys_unit; // Ideally, about a centimeter
 let edit_box = null;
 
@@ -44,6 +48,7 @@ let down_motion = null;
 let delete_timer = null;
 let animating = false;
 let fullscreen = false;
+let colour = false;
 
 let fnt = null;
 
@@ -56,8 +61,8 @@ function dbg( s ) {
 	}
 }
 
-let WIDTH = null
-let HEIGHT = null
+let WIDTH = null;
+let HEIGHT = null;
 const FBO_DIM = 256;
 let fbo = null;
 let fbo_M = null;
@@ -75,6 +80,7 @@ let tv_sliders = null;
 
 let help_button = null;
 let fullscreen_button = null;
+let colour_button = null;
 let animate_button = null;
 let save_button = null;
 
@@ -86,21 +92,102 @@ const COLS = [
 	[ 252, 255, 245 ],
 	[ 219, 188, 209 ] ];
 
+const XMLNS = "http://www.w3.org/2000/svg";
+const XLINK = "http://www.w3.org/1999/xlink";
+
 let shad1;
 
-function sub( V, W ) { return { x: V.x-W.x, y: V.y-W.y }; };
-function dot( V, W ) { return V.x*W.x + V.y*W.y; };
+class Permutation {
+	static rank( p ) {
+		let identity = Object.keys( p );
+		let product = p.slice();
+		let rank = 1;
+		while ( product.join() !== identity.join() ) {
+			product = this.mult( product, p );
+			rank++;
+		}
+		return rank;
+	}
+
+	static pow( p, exp ) {
+		let product = p.slice();
+		for ( let i = 0; i < exp - 1; i++ ) {
+			product = this.mult( product, p );
+		}
+		return product;
+	}
+
+	static mult( p1, p2 ) {
+		if ( p1.length !== p2.length ) {
+			return [ ];
+		}
+		return p1.map( x => p2[ x ] );
+	}
+
+	static evaluate( p, start, num_times ) {
+		let val = p[ start ];
+		for ( let idx = 0; idx < num_times; ++idx ) {
+			val = p[ val ];
+		}
+		return val;
+	}
+}
+
+class Colouring {
+	constructor( tiling, cols, init, p1, p2 ) {
+		this.tiling = tiling;
+		this.cols = cols;
+		this.init = init;
+		this.p1 = p1;
+		this.p2 = p2;
+	}
+
+	getColour( a, b, asp ) {
+		const nc = this.cols.length;
+		let mt = function( a ) {
+			let _mt = a % nc;
+			return _mt < 0 ? _mt + nc : _mt;
+		};
+		let c = this.init[ asp ];
+		c = Permutation.evaluate( this.p1, c, mt( a ) );
+		c = Permutation.evaluate( this.p2, c, mt( b ) );
+
+		return this.cols[ c ];
+	}
+}
+
+class UniformColouring extends Colouring {
+	constructor( tiling, col ) {
+		const nasps = tiling.numAspects();
+		const init = new Array( nasps ).fill( 0 );
+		const p = [ 0 ];
+		super( tiling, [ col ], init, p, p );
+	}
+}
+
+class MinColouring extends Colouring {
+	constructor( tiling, cols ) {
+		const clrg = tiling.ttd.colouring;
+		const init = clrg.slice( 0, tiling.numAspects() );
+		const p1 = clrg.slice( 12, 15 );
+		const p2 = clrg.slice( 15, 18 );
+		super( tiling, cols, init, p1, p2 );
+	}
+}
+
+function sub( V, W ) { return { x: V.x-W.x, y: V.y-W.y }; }
+function dot( V, W ) { return V.x*W.x + V.y*W.y; }
 function len( V ) { return sqrt( dot( V, V ) ); }
 function ptdist( V, W ) { return len( sub( V, W ) ); }
 function inv( T ) {
 	const det = T[0]*T[4] - T[1]*T[3];
 	return [T[4]/det, -T[1]/det, (T[1]*T[5]-T[2]*T[4])/det,
 		-T[3]/det, T[0]/det, (T[2]*T[3]-T[0]*T[5])/det];
-};
+}
 function normalize( V ) {
 	const l = len( V );
 	return { x: V.x / l, y: V.y / l };
-};
+}
 
 function makeBox( x, y, w, h )
 {
@@ -228,6 +315,9 @@ function setTilingType()
 	tiling.reset( tp );
 	params = tiling.getParameters();
 
+	uniform_colouring = new UniformColouring( tiling, COLS[ 4 ] );
+	min_colouring = new MinColouring( tiling, COLS.slice( 1, 4 ) );
+
 	edges = [];
 	for( let idx = 0; idx < tiling.numEdgeShapes(); ++idx ) {
 		ej = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
@@ -245,7 +335,7 @@ function setTilingType()
 	}
 
 	let yy = 50;
-	tv_sliders = []
+	tv_sliders = [];
 
 	for( let i = 0; i < params.length; ++i ) {
 		let sl = createSlider( 0.0, 500.0, params[i] * 250.0 );
@@ -269,7 +359,7 @@ function parameterChanged()
 
 function tilingTypeChanged()
 {
-	the_type = int( ih_slider.value() )
+	the_type = int( ih_slider.value() );
 	const tt = Tactile.tiling_types[ the_type ];
 	const name = ((tt<10)?"IH0":"IH") + tt;
 	ih_label.html( name );
@@ -329,13 +419,19 @@ function drawTranslationalUnit()
 
 	fbo.background( 255, 0, 0 );
 
-	const t1 = tiling.getT1();
-	const t2 = tiling.getT2();
+	colouring = colour ? min_colouring : uniform_colouring;
+
+	const r1 = Permutation.rank( colouring.p1 );
+	const r2 = Permutation.rank( colouring.p2 );
+
+	const t1 = scaleVec( tiling.getT1(), r1 );
+	const t2 = scaleVec( tiling.getT2(), r2 );
+
 	const det = (t1.x*t2.y - t2.x*t1.y);
 	fbo_M = [ t2.y / det, -t1.y / det, -t2.x / det, t1.x / det ];
 	const M = fbo_M;
 
-	const est_sc = sqrt( abs( det ) );
+	const est_sc = sqrt( abs( det / (r1 * r2) ) );
 
 	fbo.stroke( COLS[0][0], COLS[0][1], COLS[0][2] );
 	fbo.strokeWeight( FBO_DIM / 10.0 * est_sc );
@@ -348,8 +444,7 @@ function drawTranslationalUnit()
 	for( let i of tiling.fillRegionQuad( bx[0], bx[1], bx[2], bx[3] ) ) {
 		const TT = i.T;
 
-		// const col = COLS[ tiling.getColour( i.t1, i.t2, i.aspect ) + 1 ];
-		const col = COLS[ 4 ];
+		const col = colouring.getColour( i.t1, i.t2, i.aspect );
 		fbo.fill( col[0], col[1], col[2] );
 
 		fbo.beginShape();
@@ -369,10 +464,16 @@ function calculateTilingTransform()
 {
 	const t1 = tiling.getT1();
 	const t2 = tiling.getT2();
+	const pA = Permutation.pow( colouring.p1, spiral_A );
+	const pB = Permutation.pow( colouring.p2, spiral_B );
+	const rv = Permutation.rank( Permutation.mult( pA, pB ) );
 
-	const v = { 
+	let v = {
 		x: spiral_A * t1.x + spiral_B * t2.x, 
 		y: spiral_A * t1.y + spiral_B * t2.y };
+
+	v = scaleVec( v, rv );
+
 	tiling_T = Tactile.mul(
 		Tactile.matchSeg( {x:0.0,y:0.0}, {x:0.0,y:TWO_PI} ),
 		inv( Tactile.matchSeg( {x:0.0,y:0.0}, v ) ) );
@@ -550,7 +651,7 @@ function deleteVertex()
 
 function doTouchStarted( id )
 {
-	for( b of [help_button, fullscreen_button, animate_button, save_button] ) {
+	for( b of [help_button, fullscreen_button, colour_button, animate_button, save_button] ) {
 		const pos = b.position();
 		const sz = b.size();
 		const r = makeBox( pos.x, pos.y, sz.width, sz.height );
@@ -799,7 +900,7 @@ function setupInterface()
 		help_button.mousePressed( doHelp );
 	}
 	help_button.size( 90, 30 );
-	help_button.position( 10, 90 );
+	help_button.position( 10, 130 );
 
 	if( fullscreen_button == null ) {
 		fullscreen_button = createButton( "Fullscreen" );
@@ -808,24 +909,162 @@ function setupInterface()
 	fullscreen_button.size( 90, 30 );
 	fullscreen_button.position( 10, 10 );
 
+	if ( colour_button == null ) {
+		colour_button = createButton( "Colour" );
+		colour_button.mousePressed( toggleColour );
+	}
+	colour_button.size( 90, 30 );
+	colour_button.position( 10, 50 );
+
 	if( animate_button == null ) {
 		animate_button = createButton( "Animate" );
 		animate_button.mousePressed( toggleAnimation );
 	}
 	animate_button.size( 90, 30 );
-	animate_button.position( 10, 50 );
+	animate_button.position( 10, 90 );
 
 	if( save_button == null ) {
 		save_button = createButton( "Save" );
 		save_button.mousePressed( doSave );
 	}
 	save_button.size( 90, 30 );
-	save_button.position( 10, 130 );
+	save_button.position( 10, 170 );
 }
 
 function doSave()
 {
-	save( get( WIDTH/2, HEIGHT/2, WIDTH/2, HEIGHT/2 ), "spiral.png" );
+	const getSvgFile = ( s, svg ) =>
+		s.serializeToString( svg ).split( '\n' );
+
+	const svg = getSpiralTilingSVG();
+	const svgFile = getSvgFile( new XMLSerializer(), svg );
+	save( svgFile, "spiral", "svg" );
+}
+
+function getSpiralTilingSVG()
+{
+	const t1 = tiling.getT1();
+	const t2 = tiling.getT2();
+
+	let svgElement = document.createElementNS( XMLNS, 'svg' );
+	let g = document.createElementNS( XMLNS, 'g' );
+
+	svgElement.setAttribute( 'xmlns:xlink', XLINK );
+	svgElement.setAttribute( 'height', HEIGHT );
+	svgElement.setAttribute( 'width', WIDTH );
+
+	svgElement.appendChild( getSpiralUnitSVG() );
+
+	// TODO(nikihasrati): Fix small tilings in centre.
+
+	let i_i = spiral_A === 0 ? -spiral_B : -4 * spiral_A;
+	let i_f = spiral_A === 0 ? spiral_B : 5 * spiral_A;
+	let j_i = spiral_B === 0 ? -spiral_A : 1;
+	let j_f = spiral_B === 0 ? spiral_A : spiral_B;
+
+	for ( let i = i_i; i <= i_f; i++ ) {
+		for ( let j = j_i; j <= j_f; j++ ) {
+			let unit = document.createElementNS( XMLNS, 'use' );
+			unit.setAttribute( 'xlink:href', '#spiral-unit' );
+
+			let v = { x: i*t1.x + j*t2.x, y: i*t1.y + j*t2.y };
+			let vp = Tactile.mul( tiling_T, v );
+			let s = Math.exp( vp.x );
+			let r = degrees( vp.y );
+
+			unit.setAttribute( 'transform', `scale(${s} ${s}) rotate(${r})` );
+			g.appendChild( unit );
+		}
+	}
+
+	const s = HEIGHT / TWO_PI;
+	const tx = WIDTH / 2;
+	const ty = HEIGHT / 2;
+	g.setAttribute( 'transform', `translate(${tx}, ${ty}) scale(${s}, ${s})` );
+	svgElement.appendChild( g );
+
+	return svgElement;
+}
+
+// Return an SVG definition of a spiral translation unit.
+function getSpiralUnitSVG()
+{
+	let defs = document.createElementNS( XMLNS, 'defs' );
+	let symbol = document.createElementNS( XMLNS, 'symbol' );
+	let g = document.createElementNS( XMLNS, 'g' );
+
+	symbol.setAttribute('id', 'spiral-unit');
+	symbol.setAttribute('overflow', 'visible');
+
+	for ( let i = 0; i < tiling.numAspects(); i++ ) {
+		let T = tiling.getAspectTransform( i );
+		let tile = getSpiralSVG( T );
+		// TODO(nikihasrati): Add colouring when colour is toggled on.
+		tile.setAttribute( 'fill', 'none' );
+		g.appendChild( tile );
+	}
+
+	symbol.appendChild( g );
+	defs.appendChild( symbol );
+
+	return defs;
+}
+
+// Return an SVG path representing the spiral tiling aspect with transformation T.
+function getSpiralSVG( T )
+{
+	// Return the spiral coordinates of point v.
+	function spiral( v ) {
+		return {
+			x: +( Math.exp(v.x) * Math.cos(v.y) ),
+			y: +( Math.exp(v.x) * Math.sin(v.y) )}
+	}
+
+	// Return the point that divides the line segment from v1 to v2 into ratio m:n.
+	function section( v1, v2, m, n ) {
+		return {
+			x: ( m*v1.x + n*v2.x ) / ( m + n ),
+			y: ( m*v1.y + n*v2.y ) / ( m + n )
+		}
+	}
+
+	// Return sample points from tiling edge.
+	function sample_edge( v1, v2, n ) {
+		let pts = [];
+		for ( let i = 0; i <= n; i++ ) {
+			let p = spiral( section( v1, v2, n - i, i ) );
+			pts.push( [ p.x, p.y ] );
+		}
+		return pts;
+	}
+
+	// Apply the aspect transformation to the prototile.
+	let vs = [ ...tile_shape, tile_shape[0] ];
+	vs = vs.map( v => Tactile.mul( T, v ) );
+
+	// Make bezier curves to represent each edge of the spiral tile.
+	let curves = [];
+	for (let i = 0; i < vs.length - 1; i++ ) {
+		let v1 = Tactile.mul( tiling_T, vs[ i ] );
+		let v2 = Tactile.mul( tiling_T, vs[ i+1 ] );
+		let edge_curves = sample_edge( v1, v2, 32 );
+		let bezierCurves = fitCurve( edge_curves, 50 );
+		curves.push(...bezierCurves);
+	}
+
+	// Create SVG string representation of bezier curves.
+	let d = [`M ${curves[0][0][0]} ${curves[0][0][1]}`];
+	for ( c of curves ) {
+		d.push(`C ${c[1][0]} ${c[1][1]}, ${c[2][0]} ${c[2][1]}, ${c[3][0]} ${c[3][1]}`)
+	}
+
+	let path = document.createElementNS( XMLNS, 'path' );
+	path.setAttribute('d', d.join(' '));
+	path.setAttribute('stroke', 'black');
+	path.setAttribute('fill', 'none');
+	path.setAttribute('vector-effect', 'non-scaling-stroke');
+
+	return path;
 }
 
 function doHelp()
@@ -838,7 +1077,7 @@ function toggleFullscreen()
 	fullscreen = !fullscreen;
 	let elts = [
 		ih_slider, ih_label, A_slider, A_label, B_slider, B_label,
-		help_button, fullscreen_button, animate_button, save_button ].concat(
+		help_button, fullscreen_button, colour_button, animate_button, save_button ].concat(
 			tv_sliders );
 
 	for( elt of elts ) {
@@ -860,6 +1099,14 @@ function toggleFullscreen()
 
 	loop();
 	return false;
+}
+
+function toggleColour()
+{
+	colour = !colour;
+
+	drawTranslationalUnit();
+	loop();
 }
 
 function toggleAnimation()
