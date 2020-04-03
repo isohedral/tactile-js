@@ -943,6 +943,11 @@ function doSave()
 
 function getSpiralTilingSVG()
 {
+	colouring = colour ? min_colouring : uniform_colouring;
+
+	const r1 = Permutation.rank( colouring.p1 );
+	const r2 = Permutation.rank( colouring.p2 );
+
 	const t1 = tiling.getT1();
 	const t2 = tiling.getT2();
 
@@ -957,10 +962,10 @@ function getSpiralTilingSVG()
 
 	// TODO(nikihasrati): Fix small tilings in centre.
 
-	let i_i = spiral_A === 0 ? -spiral_B : -4 * spiral_A;
-	let i_f = spiral_A === 0 ? spiral_B : 5 * spiral_A;
+	let i_i = spiral_A === 0 ? -spiral_B : -8 * r1 * spiral_A;
+	let i_f = spiral_A === 0 ? spiral_B : 5 * r1 * spiral_A;
 	let j_i = spiral_B === 0 ? -spiral_A : 1;
-	let j_f = spiral_B === 0 ? spiral_A : spiral_B;
+	let j_f = spiral_B === 0 ? spiral_A : r2 * spiral_B;
 
 	for ( let i = i_i; i <= i_f; i++ ) {
 		for ( let j = j_i; j <= j_f; j++ ) {
