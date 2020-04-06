@@ -10,11 +10,7 @@
 
 let QS = null;
 
-let the_type = null;
 let params = null;
-let tiling = null;
-let edges = null;
-let tile_shape = null;
 
 const editor_x = 10;
 const editor_y = 350;
@@ -40,48 +36,14 @@ const COLS = [
 	[ 252, 255, 245 ],
 	[ 219, 188, 209 ] ];
 
-function sub( V, W ) { return { x: V.x-W.x, y: V.y-W.y }; };
-function dot( V, W ) { return V.x*W.x + V.y*W.y; };
-function len( V ) { return sqrt( dot( V, V ) ); }
-function ptdist( V, W ) { return len( sub( V, W ) ); }
-function inv( T ) {
-	const det = T[0]*T[4] - T[1]*T[3];
-	return [T[4]/det, -T[1]/det, (T[1]*T[5]-T[2]*T[4])/det,
-		-T[3]/det, T[0]/det, (T[2]*T[3]-T[0]*T[5])/det];
-};
-
-function cacheTileShape()
+const currentTiling = new TilerTheCreator({width: 800, height: 600, zoom: 1, name:"demo"});
+function setTilingEditorTransform()
 {
-	tile_shape = [];
-
-	for( let i of tiling.parts() ) {
-		const ej = edges[i.id];
-		let cur = i.rev ? (ej.length-2) : 1;
-		const inc = i.rev ? -1 : 1;
-
-		for( let idx = 0; idx < ej.length - 1; ++idx ) {
-			tile_shape.push( Tactile.mul( i.T, ej[cur] ) );
-			cur += inc;
-		}
-	}
-}
-
-function setTilingType()
-{
-	const tp = Tactile.tiling_types[ the_type ];
-	tiling.reset( tp );
-	params = tiling.getParameters();
-
-	edges = [];
-	for( let idx = 0; idx < tiling.numEdgeShapes(); ++idx ) {
-		ej = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
-		edges.push( ej );
-	}
-
-	cacheTileShape();
+	currentTiling.setTilingType();
+	currentTiling.cacheTileShape();
 	calcEditorTransform();
-
 	title = "Tiling: IH";
+	const tp = getTileType();
 	if( tp < 10 ) {
 		title += "0";
 	}
@@ -106,21 +68,6 @@ function setTilingType()
 	QS.setValuesFromJSON( vals );
 }
 
-function nextTilingType()
-{
-	if( the_type < (Tactile.num_types-1) ) {
-		the_type++;
-		setTilingType();
-	}
-}
-
-function prevTilingType()
-{
-	if( the_type > 0 ) {
-		the_type--;
-		setTilingType();
-	}
-}
 
 function centreRect( xmin, ymin, xmax, ymax )
 {
@@ -132,17 +79,11 @@ function centreRect( xmin, ymin, xmax, ymax )
 
 function drawTiling()
 {
-	const asp = width / height;
-	const h = 6.0 * zoom;
-	const w = asp * h * zoom;
-	const sc = height / (2*h);
-	const M = Tactile.mul(
-		[1, 0, width/2.0, 0, 1, height/2.0],
-		[sc, 0, 0, 0, -sc, 0] );
-
+	const {M, h, w} = currentTiling.readyToDraw();
+	const tiling = currentTiling.getCurrentTiling();
+	const tile_shape = currentTiling.getTileShape();
 	stroke( COLS[0][0], COLS[0][1], COLS[0][2] );
 	strokeWeight( 1.0 );
-
 	for( let i of tiling.fillRegionBounds( -w-2.0, -h-2.0, w+2.0, h+2.0 ) ) {
 		const TT = i.T;
 		const T = Tactile.mul( M, TT );
@@ -166,6 +107,7 @@ function calcEditorTransform()
 	let ymin = 1e7;
 	let ymax = -1e7;
 
+	const tile_shape = currentTiling.getTileShape();
 	for( let v of tile_shape ) {
 		xmin = Math.min( xmin, v.x );
 		xmax = Math.max( xmax, v.x );
@@ -181,18 +123,6 @@ function calcEditorTransform()
 		[1, 0, -0.5*(xmin+xmax), 0, 1, -0.5*(ymin+ymax)] );
 }
 
-function distToSeg( P, A, B )
-{
-	const qmp = sub( B, A );
-	const t = dot( sub( P, A ), qmp ) / dot( qmp, qmp );
-	if( (t >= 0.0) && (t <= 1.0) ) {
-		return len( sub( P, { x: A.x + t*qmp.x, y : A.y + t*qmp.y } ) );
-	} else if( t < 0.0 ) {
-		return len( sub( P, A ) );
-	} else {
-		return len( sub( P, B ) );
-	}
-}
 
 function drawEditor()
 {
@@ -207,6 +137,8 @@ function drawEditor()
 	pg.fill( COLS[3][0], COLS[3][1], COLS[3][2] );
 
 	pg.beginShape();
+
+	const tile_shape = currentTiling.getTileShape();
 	for( let v of tile_shape ) {
 		const P = Tactile.mul( editor_transform, v );
 		pg.vertex( P.x, P.y );
@@ -214,6 +146,7 @@ function drawEditor()
 	pg.endShape( CLOSE );
 
 	pg.noFill();
+	const edges = currentTiling.getCurrentEdges();
 
 	// Draw edges
 	for( let i of tiling.parts() ) {
@@ -287,7 +220,7 @@ function mouseDragged()
 		}
 
 		edges[drag_edge_shape][drag_vertex] = npt;
-		cacheTileShape();
+		currentTiling.cacheTileShape();
 		loop();
 
 		return false;
@@ -296,13 +229,14 @@ function mouseDragged()
 
 function slide()
 {
+	const tiling = currentTiling.getCurrentTiling();
 	params = []
 	vals = QS.getValuesAsJSON();
 	for( let idx = 0; idx < tiling.numParameters(); ++idx ) {
 		params.push( vals[ "v" + idx ] );
 	}
 	tiling.setParameters( params );
-	cacheTileShape();
+	currentTiling.cacheTileShape();
 	loop();
 }
 
@@ -337,7 +271,7 @@ function mousePressed()
 
 		for( let idx = 1; idx < ej.length; ++idx ) {
 			let Q = Tactile.mul( T, ej[idx] );
-			if( ptdist( Q, pt ) < 7 ) {
+			if( currentTiling.ptdist( Q, pt ) < 7 ) {
 				u_constrain = false;
 				if( !del && (idx == (ej.length-1)) ) {
 					if( shp == Tactile.U && !i.second ) {
@@ -349,7 +283,8 @@ function mousePressed()
 				if( del ) {
 					if( idx < ej.length-1 ) {
 						ej.splice( idx, 1 );
-						cacheTileShape();
+						currentTiling.cacheTileShape();
+						currentTiling.clearCurrentEdges();
 						loop();
 					}
 					return;
@@ -357,7 +292,7 @@ function mousePressed()
 					dragging = true;
 					drag_edge_shape = id;
 					drag_vertex = idx;
-					drag_T = inv( T );
+					drag_T = currentTiling.inv( T );
 					loop();
 					return;
 				}
@@ -367,13 +302,13 @@ function mousePressed()
 			}
 
 			// Check segment
-			if( distToSeg( pt, P, Q ) < 7 ) {
+			if( currentTiling.distToSeg( pt, P, Q ) < 7 ) {
 				dragging = true;
 				drag_edge_shape = id;
 				drag_vertex = idx;
-				drag_T = inv( T );
+				drag_T = currentTiling.inv( T );
 				ej.splice( idx, 0, Tactile.mul( drag_T, pt ) );
-				cacheTileShape();
+				currentTiling.cacheTileShape();
 				loop();
 				return;
 			}
@@ -394,10 +329,10 @@ function mouseReleased()
 function keyPressed()
 {
 	if( keyCode === RIGHT_ARROW ) {
-		nextTilingType();
+		currentTiling.nextTilingType();
 		loop();
 	} else if( keyCode === LEFT_ARROW ) {
-		prevTilingType();
+		currentTiling.prevTilingType();
 		loop();
 	} else if( key == ' ' ) {
 		show_controls = !show_controls;
@@ -421,10 +356,9 @@ function setup()
 	let canvas = createCanvas( 800, 600 );
 	canvas.parent( "sktch" );
 
-	the_type = 0;
-	const tp = Tactile.tiling_types[ the_type ];
-	tiling = new Tactile.IsohedralTiling( tp );
-
+	the_type = 4;
+	console.log("in setup");
+	tiling = currentTiling.getCurrentTiling();
 	editor_pane = createGraphics( editor_w, editor_h );
 
 	let res = document.getElementById( "sktch" ).getBoundingClientRect();
@@ -438,7 +372,7 @@ function setup()
 
 	QS.setGlobalChangeHandler( slide );
 
-	setTilingType();
+	setTilingEditorTransform();
 }
 
 function draw()
