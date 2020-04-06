@@ -43,7 +43,7 @@ function setTilingEditorTransform()
 	currentTiling.cacheTileShape();
 	calcEditorTransform();
 	title = "Tiling: IH";
-	const tp = getTileType();
+	const tp = currentTiling.getTileType();
 	if( tp < 10 ) {
 		title += "0";
 	}
