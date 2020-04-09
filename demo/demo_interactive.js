@@ -218,8 +218,9 @@ function mouseDragged()
 		if( u_constrain ) {
 			npt.x = 1.0;
 		}
-
+		const edges = currentTiling.getCurrentEdges();
 		edges[drag_edge_shape][drag_vertex] = npt;
+		currentTiling.setEdges(edges);
 		currentTiling.cacheTileShape();
 		loop();
 
@@ -246,7 +247,7 @@ function mousePressed()
 	if( !show_controls ) {
 		return;
 	}
-
+	const edges = currentTiling.getCurrentEdges();
 	const pt = { x: mouseX - editor_x, y: mouseY - editor_y };
 	const del = keyIsDown( SHIFT );
 
