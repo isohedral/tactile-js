@@ -3,7 +3,7 @@ TactileJS is a Javascript library for representing, manipulating, and drawing ti
 
 I created the first versions of Tactile in the late 1990s, while working on my [PhD][phd].  This Javascript library is a port of the analogous [C++ library][tactile] I created as a modern upgrade of the original Tactile. The core library is completely self-contained; I also provide a demo based on Tactile, [`P5.js`][p5js], and [`QuickSettings`][quickset] (which are included in `demo/` for convenience). Of course, the goal is not simply to use the demo page as-is, but rather to explore new applications of the library in an interactive web-based context.
 
-The rest of the documentation below is a translation into Javascript of the corresponding documentation on the [Tactile][tactile] library page. You can also peruse the source code in `demo/`, which uses the library to create a simple interactive tile editor.  You can also [try the demo][demo] online.
+The rest of the documentation below is a translation into Javascript of the corresponding documentation on the [Tactile][tactile] library page. You can also peruse the source code in `demo/`, which uses the library to develop a couple of simple interactive and non-interactive drawing programs.  You can also [try the demo][demo] online.
 
 ## A crash course on isohedral tilings
 
