@@ -95,7 +95,11 @@ function makeRandomTiling()
 	}
 	tiling.setParameters( ps );
 
-	// Make some random edge shapes
+	// Make some random edge shapes.  Note that here, we sidestep the 
+	// potential complexity of using .shape() vs. .parts() by checking
+	// ahead of time what the intrinsic edge shape is and building
+	// Bezier control points that have all necessary symmetries.
+
 	let edges = [];
 	for( let i = 0; i < tiling.numEdgeShapes(); ++i ) {
 		let ej = [];
