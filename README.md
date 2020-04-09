@@ -19,15 +19,26 @@ For each isohedral tiling type, there are constraints on the legal relationships
 
 <p align="center"><img src="images/params.png" height=150/></p>
 
+## Loading the library
+
+Tactile is delivered as an ES6 module, which you should access from your Javascript code using an `import` statement.  For example:
+
+```Javascript
+import { EdgeShape, numTypes, tilingTypes, IsohedralTiling } 
+	from './tactile.js';
+```
+
+See the `demo/` folder for more examples.
+
 ## Constructing a tiling
 
-The class `Tactile.IsohedralTiling` can be used to describe a specific tiling and its prototile.  It has a single constructor that takes the desired tiling type as an argument.  The tiling type is expressed as an integer representing a legal isohedral type.  These are all numbers between 1 and 93 (inclusive), but there are some holes—for example, there is no Type 19.  The array `Tactile.tiling_types`, with length `Tactile.num_types` (fixed at 81) contains the legal types:
+The class `IsohedralTiling` can be used to describe a specific tiling and its prototile.  It has a single constructor that takes the desired tiling type as an argument.  The tiling type is expressed as an integer representing a legal isohedral type.  These are all numbers between 1 and 93 (inclusive), but there are some holes—for example, there is no Type 19.  The array `tilingTypes`, with length `numTypes` (fixed at 81) contains the legal types:
 
 ```Javascript
 // Suppose you wanted to loop over all the tiling types...
-for( let idx = 0; idx < Tactile.num_types; ++idx ) {
+for( let idx = 0; idx < numTypes; ++idx ) {
     // Create a new tiling of the given type, with default shape.
-    let a_tiling = new Tactile.IsohedralTiling( Tactile.tiling_types[ idx ] );
+    let a_tiling = new IsohedralTiling( tilingTypes[ idx ] );
     // Do something with this tiling type
 }
 ```
@@ -87,7 +98,7 @@ for( let i of a_tiling.shape() ) {
 
 <p align="center"><img src="images/shape.png" height=250/></p>
 
-Javascript doesn't include functions for linear algebra. For what it's worth, TactileJS includes a function `Tactile.mul` which understands how to multiply 2D transformation matrices together (as might be offered to you in a shape iterator's `T` field above), and how to transform a point (represented as a Javascript object with fields `x` and `y`) using a transformation matrix.
+Javascript doesn't include functions for linear algebra. For what it's worth, TactileJS includes a function `mul` which understands how to multiply 2D transformation matrices together (as might be offered to you in a shape iterator's `T` field above), and how to transform a point (represented as a Javascript object with fields `x` and `y`) using a transformation matrix.
 
 Occasionally, it's annoying to have to worry about the **U** or **S** symmetries of edges yourself.  Tactile offers an alternative way to describe the tile's outline that includes extra steps that account for these symmetries.  In this case, the transformation matrices build in scaling operations that map a path from (0,0) to (1,0) to, say, each half of an **S** edge separately.  The correct approach here is to iterate over a tile's `parts()` rather than its `shape()`:
 
@@ -133,7 +144,7 @@ for( let i of a_tiling.fillRegionBounds( 0.0, 0.0, 8.0, 5.0 ) ) {
 }
 ```
 
-There is an alternative form `Tactile.fillRegionQuad()` that takes four points as arguments instead of bounds.
+There is an alternative form `fillRegionQuad()` that takes four points as arguments instead of bounds.
 
 The region filling algorithm isn't perfect.  It's difficult to compute exactly which tiles are needed to fill a given rectangle, at least with high efficiency.  It's possible you'll generate tiles that are completely outside the window, or leave unfilled fringes at the edge of the window.  The easiest remedy is to fill a larger region than you need and ignore the extra tiles.  In the future I may work on improving the algorithm, perhaps by including an option that performs the extra computation when requested.
 

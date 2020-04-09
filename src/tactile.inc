@@ -1,6 +1,3 @@
-tactile_lib.tiling_types = tiling_types;
-tactile_lib.tiling_type_data = tiling_type_data;
-
 function makePoint( coeffs, offs, params )
 {
 	let ret = { x : 0.0, y : 0.0 }
@@ -11,7 +8,7 @@ function makePoint( coeffs, offs, params )
 	}
 
 	return ret;
-}
+};
 
 function makeMatrix( coeffs, offs, params )
 {
@@ -29,7 +26,7 @@ function makeMatrix( coeffs, offs, params )
 	}
 
 	return ret;
-}
+};
 
 const M_orients = [
 	[1.0, 0.0, 0.0,    0.0, 1.0, 0.0],   // IDENTITY
@@ -48,9 +45,14 @@ const TSPI_S = [
 	[-0.5, 0.0, 1.0,   0.0, -0.5, 0.0]
 ];
 
-tactile_lib.IsohedralTiling = function( tp )
+class IsohedralTiling
 {
-	this.reset = function( tp )
+	constructor( tp )
+	{
+		this.reset( tp );
+	}
+
+	reset( tp )
 	{
 		this.tiling_type = tp;
 		this.ttd = tiling_type_data[ tp ];
@@ -59,7 +61,7 @@ tactile_lib.IsohedralTiling = function( tp )
 		this.recompute();
 	}
 
-	this.recompute = function()
+	recompute()
 	{
 		const ntv = this.numVertices();
 		const np = this.numParameters();
@@ -79,9 +81,8 @@ tactile_lib.IsohedralTiling = function( tp )
 			const fl = this.ttd.edge_orientations[2*idx];
 			const ro = this.ttd.edge_orientations[2*idx+1];
 			this.reversals.push( fl != ro );
-			this.edges.push( tactile_lib.mul( 
-					tactile_lib.matchSeg( 
-					    this.verts[idx], this.verts[(idx+1)%ntv] ),
+			this.edges.push( 
+				mul( matchSeg( this.verts[idx], this.verts[(idx+1)%ntv] ),
 				M_orients[2*fl+ro] ) );
 		}
 
@@ -100,17 +101,17 @@ tactile_lib.IsohedralTiling = function( tp )
 			this.ttd.translation_coeffs, 2*(np+1), this.parameters );
 	}
 
-	this.getTilingType = function()
+	getTilingType()
 	{
 		return this.tiling_type;
 	}
 
-	this.numParameters = function()
+	numParameters()
 	{
 		return this.ttd.num_params;
 	}
 
-	this.setParameters = function( arr )
+	setParameters( arr )
 	{
 		if( arr.length == (this.parameters.length-1) ) {
 			this.parameters = arr.slice( 0 );
@@ -119,22 +120,22 @@ tactile_lib.IsohedralTiling = function( tp )
 		}
 	}
 
-	this.getParameters = function()
+	getParameters()
 	{
 		return this.parameters.slice( 0, -1 );
 	}
 
-	this.numEdgeShapes = function()
+	numEdgeShapes()
 	{
 		return this.ttd.num_edge_shapes;
 	}
 
-	this.getEdgeShape = function( idx )
+	getEdgeShape( idx )
 	{
 		return this.ttd.edge_shapes[ idx ];
 	}
 
-	this.shape = function*()
+	* shape()
 	{
 		for( let idx = 0; idx < this.numVertices(); ++idx ) {
 			const an_id = this.ttd.edge_shape_ids[idx];
@@ -148,13 +149,13 @@ tactile_lib.IsohedralTiling = function( tp )
 		}
 	}
 
-	this.parts = function*()
+	* parts()
 	{
 		for( let idx = 0; idx < this.numVertices(); ++idx ) {
 			const an_id = this.ttd.edge_shape_ids[idx];
 			const shp = this.ttd.edge_shapes[an_id];
 
-			if( (shp == tactile_lib.J) || (shp == tactile_lib.I) ) {
+			if( (shp == EdgeShape.J) || (shp == EdgeShape.I) ) {
 				yield {
 					T : this.edges[idx],
 					id : an_id,
@@ -164,10 +165,10 @@ tactile_lib.IsohedralTiling = function( tp )
 				};
 			} else {
 				const indices = this.reversals[idx] ? [1,0] : [0,1];
-				const Ms = (shp == tactile_lib.U) ? TSPI_U : TSPI_S;
+				const Ms = (shp == EdgeShape.U) ? TSPI_U : TSPI_S;
 
 				yield {
-					T : tactile_lib.mul( this.edges[idx], Ms[indices[0]] ),
+					T : mul( this.edges[idx], Ms[indices[0]] ),
 					id : an_id,
 					shape : shp,
 					rev : false,
@@ -175,7 +176,7 @@ tactile_lib.IsohedralTiling = function( tp )
 				};
 				
 				yield {
-					T : tactile_lib.mul( this.edges[idx], Ms[indices[1]] ),
+					T : mul( this.edges[idx], Ms[indices[1]] ),
 					id : an_id,
 					shape : shp,
 					rev : true,
@@ -185,43 +186,42 @@ tactile_lib.IsohedralTiling = function( tp )
 		}
 	}
 
-	this.numVertices = function()
+	numVertices()
 	{
 		return this.ttd.num_vertices;
 	}
 
-	this.getVertex = function( idx )
+	getVertex( idx )
 	{
-		return this.verts[ idx ];
+		return { ...this.verts[ idx ] };
 	}
 
-	this.vertices = function()
+	vertices()
 	{
-		// FIXME -- reference or copy?
-		return this.verts.slice( 0 );
+		return this.verts.map( v => ({ ...v }) );
 	}
 
-	this.numAspects = function()
+	numAspects()
 	{
 		return this.ttd.num_aspects;
 	}
 	
-	this.getAspectTransform = function( idx )
+	getAspectTransform( idx )
 	{
-		return this.aspects[ idx ];
+		return [ ...this.aspects[ idx ] ];
 	}
 
-	this.getT1 = function()
+	getT1()
 	{
-		return this.t1;
+		return { ...this.t1 };
 	}
 
-	this.getT2 = function()
+	getT2()
 	{
-		return this.t2;
+		return { ...this.t2 };
 	}
 
-	this.fillRegionBounds = function*( xmin, ymin, xmax, ymax )
+	* fillRegionBounds( xmin, ymin, xmax, ymax )
 	{
 		yield* this.fillRegionQuad(
 			{ x : xmin, y : ymin },
@@ -230,7 +230,7 @@ tactile_lib.IsohedralTiling = function( tp )
 			{ x : xmin, y : ymax } );
 	}
 
-	this.fillRegionQuad = function*( A, B, C, D )
+	* fillRegionQuad( A, B, C, D )
 	{
 		const t1 = this.getT1();
 		const t2 = this.getT2();
@@ -358,7 +358,7 @@ tactile_lib.IsohedralTiling = function( tp )
 		}
 	}
 	
-	this.getColour = function( a, b, asp )
+	getColour( a, b, asp )
 	{
 		const clrg = this.ttd.colouring;
 		const nc = clrg[18];
@@ -382,11 +382,19 @@ tactile_lib.IsohedralTiling = function( tp )
 
 		return col;
 	}
-
-	this.reset( tp );
-}
-
-return tactile_lib;
 };
 
-return buildLibrary();})( window );
+export 
+{
+	EdgeShape,
+
+	numTypes,
+	tilingTypes,
+
+	makePoint,
+	makeMatrix,
+	mul,
+	matchSeg,
+
+	IsohedralTiling
+};
