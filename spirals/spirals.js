@@ -997,15 +997,19 @@ function sktch( p5c )
 
 		const svg = getSpiralTilingSVG();
 		const svgFile = getSvgFile( new XMLSerializer(), svg );
-		save( svgFile, "spiral", "svg" );
+		p5c.save( svgFile, "spiral", "svg" );
 	}
 
 	function getSpiralTilingSVG()
 	{
 		colouring = colour ? min_colouring : uniform_colouring;
 
+/*
 		const r1 = Permutation.rank( colouring.p1 );
 		const r2 = Permutation.rank( colouring.p2 );
+	*/
+		const r1 = colouring.p1rank;
+		const r2 = colouring.p2rank;
 
 		const t1 = tiling.getT1();
 		const t2 = tiling.getT2();
@@ -1034,7 +1038,7 @@ function sktch( p5c )
 				let v = { x: i*t1.x + j*t2.x, y: i*t1.y + j*t2.y };
 				let vp = mul( tiling_T, v );
 				let s = Math.exp( vp.x );
-				let r = degrees( vp.y );
+				let r = p5c.degrees( vp.y );
 
 				unit.setAttribute( 'transform', `scale(${s} ${s}) rotate(${r})` );
 				g.appendChild( unit );
@@ -1118,7 +1122,7 @@ function sktch( p5c )
 
 		// Create SVG string representation of bezier curves.
 		let d = [`M ${curves[0][0][0]} ${curves[0][0][1]}`];
-		for ( c of curves ) {
+		for ( let c of curves ) {
 			d.push(`C ${c[1][0]} ${c[1][1]}, ${c[2][0]} ${c[2][1]}, ${c[3][0]} ${c[3][1]}`)
 		}
 
