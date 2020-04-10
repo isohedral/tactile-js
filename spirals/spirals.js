@@ -9,6 +9,7 @@
 'use strict';
 
 import { fitCurve } from './fit-curve.js';
+import { earcut } from './earcut.js'
 import { mul, matchSeg, EdgeShape, numTypes, tilingTypes, IsohedralTiling } 
 	from '../lib/tactile.js';
 
@@ -19,6 +20,7 @@ function sktch( p5c )
 	let tiling = null;
 	let edges = null;
 	let tile_shape = null;
+	let triangles = null;
 
 	let colouring = null;
 	let uniform_colouring = null;
@@ -147,18 +149,28 @@ function sktch( p5c )
 			this.cols = cols;
 			this.init = init;
 			this.p1 = p1;
+			this.p1rank = Permutation.rank( p1 );
 			this.p2 = p2;
+			this.p2rank = Permutation.rank( p2 );
 		}
 
 		getColour( a, b, asp ) {
+		/*
 			const nc = this.cols.length;
 			let mt = function( a ) {
 				let _mt = a % nc;
 				return _mt < 0 ? _mt + nc : _mt;
 			};
-			let c = this.init[ asp ];
 			c = Permutation.evaluate( this.p1, c, mt( a ) );
 			c = Permutation.evaluate( this.p2, c, mt( b ) );
+		*/
+			
+			let c = this.init[ asp ];
+			const r1 = this.p1rank;
+			const r2 = this.p2rank;
+
+			c = Permutation.evaluate( this.p1, c, ((a%r1)+r1)%r1 );
+			c = Permutation.evaluate( this.p2, c, ((b%r2)+r2)%r2 );
 
 			return this.cols[ c ];
 		}
@@ -302,6 +314,7 @@ function sktch( p5c )
 	function cacheTileShape()
 	{
 		tile_shape = [];
+		let blah = [];
 
 		for( let i of tiling.parts() ) {
 			const ej = edges[i.id];
@@ -309,10 +322,15 @@ function sktch( p5c )
 			const inc = i.rev ? -1 : 1;
 
 			for( let idx = 0; idx < ej.length - 1; ++idx ) {
-				tile_shape.push( mul( i.T, ej[cur] ) );
+				const { x, y } = mul( i.T, ej[cur] );
+				tile_shape.push( { x : x, y : y } );
+				blah.push( x );
+				blah.push( y );
 				cur += inc;
 			}
 		}
+
+		triangles = earcut( blah );
 
 		drawTranslationalUnit();
 	}
@@ -440,10 +458,7 @@ function sktch( p5c )
 		const M = fbo_M;
 
 		const est_sc = Math.sqrt( Math.abs( det / (r1 * r2) ) );
-
-		fbo.stroke( COLS[0][0], COLS[0][1], COLS[0][2] );
-		fbo.strokeWeight( FBO_DIM / 10.0 * est_sc );
-		fbo.strokeJoin( p5c.ROUND );
+		// console.log( est_sc );
 
 		fbo.push();
 		fbo.applyMatrix( M[0], M[1], M[2], M[3], 0.0, 0.0 );
@@ -451,19 +466,47 @@ function sktch( p5c )
 
 		for( let i of tiling.fillRegionQuad( bx[0], bx[1], bx[2], bx[3] ) ) {
 			const TT = i.T;
+			let tshape = [];
+			for( let v of tile_shape ) {
+				let P = mul( TT, v );
+				P.x *= FBO_DIM;
+				P.y *= FBO_DIM;
+				tshape.push( P );
+			}
 
 			const col = colouring.getColour( i.t1, i.t2, i.aspect );
 			fbo.fill( col[0], col[1], col[2] );
+			fbo.stroke( col[0], col[1], col[2] );
+			fbo.strokeWeight( est_sc );
 
-			fbo.beginShape();
-			for( let v of tile_shape ) {
-				const P = mul( TT, v );
-				fbo.vertex( P.x * FBO_DIM, P.y * FBO_DIM );
+			for( let idx = 0; idx < triangles.length; idx += 3 ) {
+				fbo.triangle( 
+					tshape[triangles[idx]].x, tshape[triangles[idx]].y,
+					tshape[triangles[idx+1]].x, tshape[triangles[idx+1]].y,
+					tshape[triangles[idx+2]].x, tshape[triangles[idx+2]].y );
 			}
-			fbo.endShape( fbo.CLOSE );
+
+			fbo.stroke( COLS[0][0], COLS[0][1], COLS[0][2] );
+			fbo.strokeWeight( 20 * est_sc );
+			fbo.strokeJoin( p5c.ROUND );
+			fbo.noFill();
+
+			for( let idx = 0; idx < tile_shape.length; ++idx ) {
+				const P = tshape[idx];
+				const Q = tshape[(idx+1)%tile_shape.length];
+
+				fbo.line( P.x, P.y, Q.x, Q.y );
+			}
 		}
 
 		fbo.pop();
+
+/*
+		fbo.noFill();
+		fbo.stroke( 255, 0, 0 );
+		fbo.strokeWeight( 1 );
+		fbo.rect( 0, 0, FBO_DIM, FBO_DIM );
+		*/
 
 		calculateTilingTransform();
 	}
@@ -584,15 +627,21 @@ function sktch( p5c )
 
 		p5c.fill( COLS[3][0], COLS[3][1], COLS[3][2] );
 
-		p5c.beginShape();
-		for( let v of tile_shape ) {
-			const P = mul( editor_T, v );
-			p5c.vertex( P.x, P.y );
-		}
-		p5c.endShape( p5c.CLOSE );
+		let tshape = [];
 
-		p5c.noFill();
+		for( let v of tile_shape ) {
+			tshape.push( mul( editor_T, v ) );
+		}
+
+		for( let i = 0; i < triangles.length; i += 3 ) {
+			p5c.triangle( 
+				tshape[triangles[i]].x, tshape[triangles[i]].y,
+				tshape[triangles[i+1]].x, tshape[triangles[i+1]].y,
+				tshape[triangles[i+2]].x, tshape[triangles[i+2]].y );
+		}
+
 		p5c.strokeWeight( 2.0 );
+		p5c.noFill();
 
 		// Draw edges
 		for( let i of tiling.parts() ) {
@@ -603,12 +652,14 @@ function sktch( p5c )
 			}
 
 			const M = mul( editor_T, i.T );
-			p5c.beginShape();
+			let prev = null;
 			for( let v of edges[i.id] ) {
 				const P = mul( M, v );
-				p5c.vertex( P.x, P.y );
+				if( prev != null ) {
+					p5c.line( prev.x, prev.y, P.x, P.y );
+				}
+				prev = P;
 			}
-			p5c.endShape();
 		}
 
 		// Draw tiling vertices
