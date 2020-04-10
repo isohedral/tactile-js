@@ -1,7 +1,8 @@
 'use strict';
 
-// module.exports = earcut;
-// module.exports.default = earcut;
+// Earcut implementation taken from 
+// https://github.com/mapbox/earcut
+// Minor change: added export statement at the end.
 
 function earcut(data, holeIndices, dim) {
 
