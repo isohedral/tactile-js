@@ -1,1 +1,26 @@
-{"type": "module"}
+{
+  "name": "tactile",
+  "version": "1.0.0",
+  "description": "TactileJS is a Javascript library for representing, manipulating, and drawing tilings of the plane.",
+  "main": "tactile.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isohedral/tactile-js.git"
+  },
+  "keywords": [
+    "tiles",
+    "tiling",
+    "geometry",
+    "isohedral"
+  ],
+  "author": "Craig S. Kaplan",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/isohedral/tactile-js/issues"
+  },
+  "homepage": "https://github.com/isohedral/tactile-js#readme",
+  "type": "module"
+}
