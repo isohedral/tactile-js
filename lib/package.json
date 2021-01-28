@@ -1,5 +1,5 @@
 {
-  "name": "tactile",
+  "name": "tactile-js",
   "version": "1.0.0",
   "description": "TactileJS is a Javascript library for representing, manipulating, and drawing tilings of the plane.",
   "main": "tactile.js",
