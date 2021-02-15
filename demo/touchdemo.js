@@ -780,6 +780,18 @@ let sktch = function( p5c )
 		setupInterface();
 
 		the_type = 0;
+
+		let parms = p5c.getURLParams();
+		if( 't' in parms ) {
+			let tt = p5c.int( parms.t );
+			for( let i = 0; i < tilingTypes.length; ++i ) {
+				if( tilingTypes[i] == tt ) {
+					the_type = i;
+					break;
+				}
+			}
+		}
+
 		const tp = tilingTypes[ the_type ];
 		tiling = new IsohedralTiling( tp );
 
