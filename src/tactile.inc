@@ -237,6 +237,8 @@ class IsohedralTiling
 		const ttd = this.ttd;
 		const aspects = this.aspects;
 
+		let last_y;
+
 		function bc( M, p ) {
 			return { 
 				x : M[0]*p.x + M[1]*p.y,
@@ -263,6 +265,10 @@ class IsohedralTiling
 			}
 
 			let y = Math.floor( ymin );
+			if( last_y ) {
+				y = Math.max( last_y, y );
+			}
+
 			while( y < ymax ) {
 				const yi = Math.trunc( y );
 				let x = Math.floor( x1 );
@@ -288,6 +294,8 @@ class IsohedralTiling
 				x2 += dx2;
 				y += 1.0;
 			}
+
+			last_y = y;
 		}
 
 		function* fillFixX( A, B, C, D, do_top )
