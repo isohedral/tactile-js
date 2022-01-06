@@ -148,6 +148,15 @@ There is an alternative form `fillRegionQuad()` that takes four points as argume
 
 The region filling algorithm isn't perfect.  It's difficult to compute exactly which tiles are needed to fill a given rectangle, at least with high efficiency.  It's possible you'll generate tiles that are completely outside the window, or leave unfilled fringes at the edge of the window.  The easiest remedy is to fill a larger region than you need and ignore the extra tiles.  In the future I may work on improving the algorithm, perhaps by including an option that performs the extra computation when requested.
 
+## Other versions
+
+ * [Tactile][tactile], my original C++ version of this library.
+ * [Tactile-rs][tactilers], a Rust port by Antoine Büsch
+ 
+## In closing
+
+I hope you find this library to be useful.  If you are using Tactile for research, for fun, or for commercial products, I would appreciate it if you'd let me know.  I'd be happy to list projects based on Tactile here, and it helps my research agenda to be able to say that the library is getting used.  Thank you.
+
 ## In closing
 
 I hope you find this library to be useful.  If you are using Tactile for research, for fun, or for commercial products, I would appreciate it if you'd let me know.  I'd be happy to list projects based on Tactile here, and it helps my research agenda to be able to say that the library is getting used.  Thank you.
@@ -158,3 +167,4 @@ I hope you find this library to be useful.  If you are using Tactile for researc
 [tactile]: https://github.com/isohedral/tactile
 [demo]: http://isohedral.ca/software/tactile/
 [mybook]: https://www.amazon.com/Introductory-Computer-Graphics-Synthesis-Animation/dp/1608450171
+[tactilers]: https://github.com/abusch/tactile-rs
