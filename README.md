@@ -152,6 +152,7 @@ The region filling algorithm isn't perfect.  It's difficult to compute exactly w
 
  * [Tactile][tactile], my original C++ version of this library.
  * [Tactile-rs][tactilers], a Rust port by Antoine Büsch
+ * [Tactile-python][tactilepy], a Python port by David Braun
  
 ## In closing
 
@@ -168,3 +169,4 @@ I hope you find this library to be useful.  If you are using Tactile for researc
 [demo]: http://isohedral.ca/software/tactile/
 [mybook]: https://www.amazon.com/Introductory-Computer-Graphics-Synthesis-Animation/dp/1608450171
 [tactilers]: https://github.com/abusch/tactile-rs
+[tactilepy]: https://github.com/DBraun/tactile-python
