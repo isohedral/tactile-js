@@ -158,10 +158,6 @@ The region filling algorithm isn't perfect.  It's difficult to compute exactly w
 
 I hope you find this library to be useful.  If you are using Tactile for research, for fun, or for commercial products, I would appreciate it if you'd let me know.  I'd be happy to list projects based on Tactile here, and it helps my research agenda to be able to say that the library is getting used.  Thank you.
 
-## In closing
-
-I hope you find this library to be useful.  If you are using Tactile for research, for fun, or for commercial products, I would appreciate it if you'd let me know.  I'd be happy to list projects based on Tactile here, and it helps my research agenda to be able to say that the library is getting used.  Thank you.
-
 [phd]: https://cs.uwaterloo.ca/~csk/other/phd/
 [p5js]: https://p5js.org/
 [quickset]: https://github.com/bit101/quicksettings
